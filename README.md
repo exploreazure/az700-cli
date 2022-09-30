@@ -305,3 +305,102 @@ az network vnet peering create `
    --allow-vnet-access
 
 ```
+
+### Create a virtual network gateway
+
+> Connect via ssh to testvm01 and testvm02
+
+> Going to delete peerings for this task, before creating gateway
+
+
+```
+$name="CoreServicesVnet-to-ManufacturingVnet"
+$resource_group_name="rg-az700-cli"
+$vnet_name="ManufacturingVnet"
+
+az network vnet peering delete `
+    --resource-group $resource_group_name `
+    --name $name `
+    --vnet-name $vnet_name
+
+$name="ManufacturingVnet-to-CoreServicesVnet"
+$resource_group_name="rg-az700-cli"
+$vnet_name="ManufacturingVnet"
+
+az network vnet peering delete `
+    --resource-group $resource_group_name `
+    --name $name `
+    --vnet-name $vnet_name
+
+# Create Public IP for Gateway
+$name="CoreServicesGatewayPublicIP"
+$resource_group_name="rg-az700-cli"
+$sku="Basic"
+$location="EastUS"
+
+az network public-ip create `
+   --name $name `
+   --resource-group $resource_group_name `
+   --sku $sku `
+   --location $location
+
+# Create VNET Gateway
+$name="CoreServicesVnetGateway"
+$resource_group_name="rg-az700-cli"
+$location="EastUS"
+$gateway_type="Vpn"
+$vpn_type="RouteBased"
+$sku="VpnGw1"
+$generation="Generation1"
+$vnet="CoreServicesVnet"
+$publicIP="CoreServicesGatewayPublicIP"
+
+az network vnet-gateway create `
+   --name $name `
+   --public-ip-addresses $publicIP `
+   --resource-group $resource_group_name="rg-az700-cli" `
+   --vnet $vnet `
+   --location $location `
+   --vpn-type $vpn_type `
+   --sku $sku `
+   --gateway-type $gateway_type `
+   --vpn-gateway-generation $generation
+
+# Create Public IP for Gateway
+$name="ManufacturingGatewayPublicIP"
+$resource_group_name="rg-az700-cli"
+$sku="Basic"
+$location="WestEurope"
+
+az network public-ip create `
+   --name $name `
+   --resource-group $resource_group_name `
+   --sku $sku `
+   --location $location
+
+# Create VNET Gateway
+$name="ManufacturingVnetGateway"
+$resource_group_name="rg-az700-cli"
+$location="WestEurope"
+$gateway_type="Vpn"
+$vpn_type="RouteBased"
+$sku="VpnGw1"
+$generation="Generation1"
+$vnet="ManufacturingVnet"
+$publicIP="ManufacturingGatewayPublicIP"
+
+az network vnet-gateway create `
+   --name $name `
+   --public-ip-addresses $publicIP `
+   --resource-group $resource_group_name="rg-az700-cli" `
+   --vnet $vnet `
+   --location $location `
+   --vpn-type $vpn_type `
+   --sku $sku `
+   --gateway-type $gateway_type `
+   --vpn-gateway-generation $generation
+```
+
+
+
+### Create a virtual WAN 
