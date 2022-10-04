@@ -484,7 +484,7 @@ $gateway_id2         = az network vnet-gateway show --name $gateway_name2 --reso
 
 az network vpn-gateway delete --ids $gateway_id2
 
-# Once gateways have been deleted, you can delete public ips
+# Delete public ips
 
 $name="CoreServicesGatewayPublicIP"
 $resource_group_name="rg-az700-cli"
