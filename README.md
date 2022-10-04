@@ -5,7 +5,9 @@ This readme contains the Azure CLI commands I used to create each lab environmen
 I wanted to use the Azure CLI, so I can deploy and destroy resources quickly within my subscription. 
 
 ## Lab Environment via the portal
-This video by Susanth Sutheesh describes how resources are deployed via the portal https://www.youtube.com/watch?v=DFdOi0QVso4  - I would recommend viewing this video, as part of your preparation for AZ-700. As a DevOps engineer, I have followed the excellant instructions in the youtube video and produced Azure CLI commands for each task.
+This video by Susanth Sutheesh describes how resources are deployed via the portal https://www.youtube.com/watch?v=DFdOi0QVso4  - I would recommend viewing this video, as part of your preparation for AZ-700. As a DevOps engineer, I have followed the excellent instructions in the YouTube video and produced Azure CLI commands for each task.
+
+I would suggest looking at the all the available parameters available using the Microsoft Azure CLI documentation, as you run each Azure CLI command.
 
 ## Virtual Networks
 
@@ -117,6 +119,16 @@ az network vnet subnet create --name $subnet_name `
 # Deploy SensorSubnet3
 $subnet_name="SensorSubnet3"
 $subnet_prefixes="10.30.22.0/24"
+
+az network vnet subnet create --name $subnet_name `
+   --address-prefixes $subnet_prefixes `
+   --vnet-name $vnet_name `
+   --resource-group $resource_group_name
+
+# Deploy Gateway Subnet
+$subnet_name="GatewaySubnet"
+$subnet_prefixes="10.30.23.0/27"
+$vnet_name="ManufacturingVnet"
 
 az network vnet subnet create --name $subnet_name `
    --address-prefixes $subnet_prefixes `
@@ -332,6 +344,7 @@ az network vnet peering delete `
     --name $name `
     --vnet-name $vnet_name
 
+
 # Create Public IP for Gateway
 $name="CoreServicesGatewayPublicIP"
 $resource_group_name="rg-az700-cli"
@@ -358,7 +371,7 @@ $publicIP="CoreServicesGatewayPublicIP"
 az network vnet-gateway create `
    --name $name `
    --public-ip-addresses $publicIP `
-   --resource-group $resource_group_name="rg-az700-cli" `
+   --resource-group $resource_group_name `
    --vnet $vnet `
    --location $location `
    --vpn-type $vpn_type `
@@ -392,15 +405,102 @@ $publicIP="ManufacturingGatewayPublicIP"
 az network vnet-gateway create `
    --name $name `
    --public-ip-addresses $publicIP `
-   --resource-group $resource_group_name="rg-az700-cli" `
+   --resource-group $resource_group_name `
    --vnet $vnet `
    --location $location `
    --vpn-type $vpn_type `
    --sku $sku `
    --gateway-type $gateway_type `
    --vpn-gateway-generation $generation
+
+$gateway_name1       = "CoreServicesVnetGateway"
+$gateway_name2       = "ManufacturingVnetGateway"
+$name                = "CoreServicesGW-to-ManufacturingGW"
+$resource_group_name = "rg-az700-cli"
+$location            = "EastUS"
+$shared_key          = "InProdThisShouldBeStoredInKeyVault!1"
+
+$gateway_id1         = az network vnet-gateway show --name $gateway_name1 --resource-group $resource_group_name --query "id" -o tsv
+$gateway_id2         = az network vnet-gateway show --name $gateway_name2 --resource-group $resource_group_name --query "id" -o tsv
+
+
+az network vpn-connection create `
+   --name $name `
+   --vnet-gateway1 $gateway_id1 `
+   --resource-group $resource_group_name `
+   --vnet-gateway2 $gateway_id2 `
+   --location $location `
+   --shared-key $shared_key 
+
+$gateway_name1       = "ManufacturingVnetGateway"
+$gateway_name2       = "CoreServicesVnetGateway"
+$name                = "ManufacturingGW-to-CoreServicesGW"
+$resource_group_name = "rg-az700-cli"
+$location            = "WestEurope"
+$shared_key          = "InProdThisShouldBeStoredInKeyVault!1"
+
+$gateway_id1         = az network vnet-gateway show --name $gateway_name1 --resource-group $resource_group_name --query "id" -o tsv
+$gateway_id2         = az network vnet-gateway show --name $gateway_name2 --resource-group $resource_group_name --query "id" -o tsv
+
+az network vpn-connection create `
+   --name $name `
+   --vnet-gateway1 $gateway_id1 `
+   --resource-group $resource_group_name `
+   --vnet-gateway2 $gateway_id2 `
+   --location $location `
+   --shared-key $shared_key 
+
+# Wait until the connections in each gateway are showwing as connected
+# Then, start up a vm in each region and try to ping the other region. You should be able to ping devices
+
+# This completes this exercise, you have created a global VNET-to-VNET connection using two VPN gateways
+# The following command will delete the vpn gateways and connections
+
+$name                = "CoreServicesGW-to-ManufacturingGW"
+$resource_group_name = "rg-az700-cli"
+
+az network vpn-connection delete `
+   --name $name `
+   --resource-group $resource_group_name
+
+$name                = "ManufacturingGW-to-CoreServicesGW"
+$resource_group_name = "rg-az700-cli"
+
+az network vpn-connection delete `
+   --name $name `
+   --resource-group $resource_group_name
+
+# Now delete gateways
+# At 04/10/20202, the next two Azure CLI commands didn't work. They didn't delete the gateways. I ended up deleting the gateways through the portal
+
+$gateway_name1       = "CoreServicesVnetGateway"
+$gateway_name2       = "ManufacturingVnetGateway"
+
+$gateway_id1         = az network vnet-gateway show --name $gateway_name1 --resource-group $resource_group_name --query "id" -o tsv
+
+az network vpn-gateway delete --ids $gateway_id1
+
+$gateway_id2         = az network vnet-gateway show --name $gateway_name2 --resource-group $resource_group_name --query "id" -o tsv
+
+az network vpn-gateway delete --ids $gateway_id2
+
+# Once gateways have been deleted, you can delete public ips
+
+$name="CoreServicesGatewayPublicIP"
+$resource_group_name="rg-az700-cli"
+
+az network public-ip delete `
+   --name $name `
+   --resource-group $resource_group_name
+
+$name="ManufacturingGatewayPublicIP"
+$resource_group_name="rg-az700-cli"
+
+az network public-ip delete `
+   --name $name `
+   --resource-group $resource_group_name
+
 ```
 
-
-
 ### Create a virtual WAN 
+
